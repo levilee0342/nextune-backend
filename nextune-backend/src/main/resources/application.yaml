@@ -1,0 +1,56 @@
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: ${CONTEXT_PATH:/api}
+
+spring:
+  application:
+    name: ${APP_NAME:nextune-backend}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: ${HIBERNATE_DDL:none}
+    show-sql: ${SHOW_SQL:true}
+    properties:
+      hibernate:
+        dialect: ${HIBERNATE_DIALECT:org.hibernate.dialect.MySQL8Dialect}
+
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+app:
+  security:
+    bcrypt-strength: ${BCRYPT_STRENGTH:12}
+  jwt:
+    secret: ${JWT_SECRET}
+    header: ${JWT_HEADER:Authorization}
+    prefix: ${JWT_PREFIX:Bearer}
+    access-expires-in-min: ${JWT_ACCESS_EXP_MIN:15}
+    refresh-expires-in-days: ${JWT_REFRESH_EXP_DAYS:30}
+    session-expires-in-days: ${JWT_SESSION_EXP_DAYS:30}
+    clock-skew-seconds: ${JWT_CLOCK_SKEW:60}
+    rotate-on-refresh: ${JWT_ROTATE_REFRESH:true}
+    reuse-detection: ${JWT_REUSE_DETECTION:true}
+  refresh-token:
+    store-user-agent: ${REFRESH_STORE_UA:true}
+    store-ip: ${REFRESH_STORE_IP:true}
+
+web:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+    allowed-headers: ${CORS_ALLOWED_HEADERS:*}
+    exposed-headers: ${CORS_EXPOSED_HEADERS:Authorization}
+    allowed-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+    max-age: ${CORS_MAX_AGE:3600}

@@ -1,0 +1,181 @@
+name: CI/CD pipeline for Backend Server
+
+on:
+  push:
+    branches: [dev]
+
+env:
+  DOCKER_IMAGE: leetuan0342/my-nextune-server
+  DOCKER_TAG: 1
+
+
+jobs:
+  build:
+    name: Build Backend Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set up Docker BuildX
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build --no-cache -t $DOCKER_IMAGE:$DOCKER_TAG .
+          docker push $DOCKER_IMAGE:$DOCKER_TAG
+
+      - name: Copy necessary files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "compose.yml"
+          target: "~/nextune-server"
+
+  deploy:
+    name: Deploy Backend Server
+    runs-on: ubuntu-latest
+    needs: [ "build" ]
+
+    steps:
+      - name: Write Compose .env on server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            mkdir -p ~/nextune-server/nextune-backend
+            # ví dụ trong deploy job (Write Compose .env on server)
+            cat > ~/nextune-server/nextune-backend/.env <<EOF
+            # ===== Server =====
+            SERVER_PORT=${{ secrets.SERVER_PORT || '8080' }}
+            CONTEXT_PATH=${{ secrets.CONTEXT_PATH || '/api' }}
+            APP_NAME=${{ secrets.APP_NAME || 'nextune-backend' }}
+            
+            # ===== Database =====
+            SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}
+            SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}
+            SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+            
+            # ===== JPA =====
+            HIBERNATE_DDL=${{ secrets.HIBERNATE_DDL || 'none' }}
+            SHOW_SQL=${{ secrets.SHOW_SQL || 'true' }}
+            HIBERNATE_DIALECT=${{ secrets.HIBERNATE_DIALECT || 'org.hibernate.dialect.MySQL8Dialect' }}
+            
+            # ===== Mail =====
+            MAIL_HOST=${{ secrets.MAIL_HOST || '' }}
+            MAIL_PORT=${{ secrets.MAIL_PORT || '587' }}
+            MAIL_USERNAME=${{ secrets.MAIL_USERNAME || '' }}
+            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD || '' }}
+            
+            # ===== Security & JWT =====
+            BCRYPT_STRENGTH=${{ secrets.BCRYPT_STRENGTH || '12' }}
+            JWT_SECRET=${{ secrets.JWT_SECRET || '' }}
+            JWT_HEADER=${{ secrets.JWT_HEADER || 'Authorization' }}
+            JWT_PREFIX=${{ secrets.JWT_PREFIX || 'Bearer' }}
+            JWT_ACCESS_EXP_MIN=${{ secrets.JWT_ACCESS_EXP_MIN || '15' }}
+            JWT_REFRESH_EXP_DAYS=${{ secrets.JWT_REFRESH_EXP_DAYS || '14' }}
+            JWT_CLOCK_SKEW=${{ secrets.JWT_CLOCK_SKEW || '60' }}
+            JWT_ROTATE_REFRESH=${{ secrets.JWT_ROTATE_REFRESH || 'true' }}
+            JWT_REUSE_DETECTION=${{ secrets.JWT_REUSE_DETECTION || 'true' }}
+            
+            # ===== CORS =====
+            CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS || '' }}
+            CORS_ALLOWED_METHODS=${{ secrets.CORS_ALLOWED_METHODS || 'GET,POST,PUT,DELETE,OPTIONS' }}
+            CORS_ALLOWED_HEADERS=${{ secrets.CORS_ALLOWED_HEADERS || '*' }}
+            CORS_EXPOSED_HEADERS=${{ secrets.CORS_EXPOSED_HEADERS || 'Authorization' }}
+            CORS_ALLOW_CREDENTIALS=${{ secrets.CORS_ALLOW_CREDENTIALS || 'true' }}
+            CORS_MAX_AGE=${{ secrets.CORS_MAX_AGE || '3600' }}
+            EOF
+   
+            chmod 600 ~/nextune-server/nextune-backend/.env
+      - name: Deploy Backend Server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            
+            # 1) Chọn lệnh compose phù hợp
+            if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+              COMPOSE="docker compose"
+            elif command -v docker-compose >/dev/null 2>&1; then
+              COMPOSE="docker-compose"
+            else
+              echo "ERROR: Neither 'docker compose' (v2) nor 'docker-compose' (v1) is available."
+              exit 1
+            fi
+            
+            # 2) Nếu user không có quyền docker, fallback sang sudo
+            DOCKER="docker"
+            if ! $DOCKER ps >/dev/null 2>&1; then
+              if command -v sudo >/dev/null 2>&1; then
+                DOCKER="sudo docker"
+                COMPOSE="sudo ${COMPOSE}"
+              else
+                echo "ERROR: Current user cannot access docker and sudo is not available."
+                exit 1
+              fi
+            fi
+            
+            echo "Docker version:"
+            $DOCKER version
+            echo "Compose version:"
+            $COMPOSE version
+            
+            # 3) Đảm bảo thư mục và file compose tồn tại
+            mkdir -p ~/nextune-server
+            cd ~/nextune-server
+            test -f compose.yml || { echo "ERROR: compose.yml not found in $(pwd)"; ls -la; exit 1; }
+            
+            # 4) Login Docker Hub trên SERVER
+            echo "Logging in to Docker Hub on server..."
+            $DOCKER logout || true
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | $DOCKER login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            
+            # 5) Network external (nếu chưa có thì tạo)
+            $DOCKER network inspect nextune-network >/dev/null 2>&1 || $DOCKER network create nextune-network
+            
+            # 6) Pull image mới, recreate server
+            echo "Pulling images..."
+            $COMPOSE -f compose.yml pull --quiet nextune-server
+            
+            echo "Recreating server..."
+            $COMPOSE -f compose.yml down --remove-orphans
+            $COMPOSE -f compose.yml up -d
+            
+            echo "Containers:"
+            $DOCKER ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
+            
+            echo "=== Last 100 log lines of nextune-server ==="
+            $COMPOSE -f compose.yml logs --no-color --tail=100 nextune-server || true
+            
+            # 7) Kiểm tra container có chạy không; nếu không, in logs và faill
+            sleep 3
+            if ! $DOCKER ps --filter "name=nextune-server" --filter "status=running" --format '{{.Names}}' | grep -q '^nextune-server$'; then
+              echo "Container not running. Recent logs:"
+              $COMPOSE -f compose.yml logs --no-color --tail=200 nextune-server || true
+              exit 1
+            fi
+   
+            
+            echo "Deployment completed successfully."

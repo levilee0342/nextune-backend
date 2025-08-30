@@ -1,0 +1,16 @@
+services:
+  nextune-server:
+    image: leetuan0342/my-nextune-server:1
+    container_name: nextune-server
+    env_file:
+      - ./nextune-backend/.env
+    # Map the same port inside and outside, default to 8080 if SERVER_PORT is not set
+    ports:
+      - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
+    networks:
+      - nextune-network
+    restart: unless-stopped
+
+networks:
+  nextune-network:
+    external: true
