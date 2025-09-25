@@ -1,5 +1,4 @@
-# 🎵 Nextune - Music Application
-## [Application Link](https://nextune.ddnsgeek.com/)
+# 🎵 [Nextune - Music Application](https://nextune.ddnsgeek.com/)
 
 A **Spotify-inspired music application** with a scalable backend built on **Java Spring Boot**, powered by a **hybrid recommendation system**. Deployed on **AWS EC2** with **Docker** and automated using **GitHub Actions CI/CD**.
 
