@@ -10,11 +10,29 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.example.nextune_backend.entity.RefreshToken;
-
+import java.util.List;
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
     Optional<RefreshToken> findByTokenHashAndRevokedAtIsNull(String tokenHash);
-    Optional<RefreshToken> findBySessionHashAndRevokedAtIsNull(String sessionHash);
-    @Modifying
-    @Query("update RefreshToken rt set rt.revokedAt = :now where rt.user.id = :userId and rt.revokedAt is null")
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        UPDATE RefreshToken rt
+           SET rt.revokedAt = :now
+         WHERE rt.sessionHash = :sessionHash
+           AND rt.revokedAt IS NULL
+    """)
+    int revokeAllBySessionHash(@Param("sessionHash") String sessionHash, @Param("now") Instant now);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        UPDATE RefreshToken rt
+           SET rt.revokedAt = :now
+         WHERE rt.user.id = :userId
+           AND rt.revokedAt IS NULL
+    """)
     int revokeAllByUserId(@Param("userId") Long userId, @Param("now") Instant now);
+
+    // Nếu bạn có finder để refresh theo session:
+    List<RefreshToken> findBySessionHashAndRevokedAtIsNull(String sessionHash);
+
+
 }

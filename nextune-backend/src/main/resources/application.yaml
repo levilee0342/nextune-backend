@@ -2,8 +2,16 @@ server:
   port: ${SERVER_PORT:8080}
   servlet:
     context-path: ${CONTEXT_PATH:/api}
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-exception: true
 
 spring:
+  jackson:
+    date-format: yyyy-MM-dd'T'HH:mm:ss
+    serialization:
+      write-dates-as-timestamps: false
   application:
     name: ${APP_NAME:nextune-backend}
   datasource:
@@ -29,7 +37,36 @@ spring:
           auth: true
           starttls:
             enable: true
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID}
+            client-secret: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET}
+            scope: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_SCOPE:openid,email,profile}
+            redirect-uri: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI:http://localhost:8080/api/auth/login/google/callback}
+            client-name: ${SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_NAME:Google}
+        provider:
+          google:
+            authorization-uri: ${SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GOOGLE_AUTHORIZATION_URI:https://accounts.google.com/o/oauth2/v2/auth}
+            token-uri: ${SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GOOGLE_TOKEN_URI:https://oauth2.googleapis.com/token}
+            jwk-set-uri: ${SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GOOGLE_JWK_SET_URI:https://www.googleapis.com/oauth2/v3/certs}
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:mypassword}
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX_ACTIVE:16}
+          max-idle: ${REDIS_POOL_MAX_IDLE:8}
+          min-idle: ${REDIS_POOL_MIN_IDLE:1}
+
+    cache:
+      type: redis
 app:
+  env: local
   security:
     bcrypt-strength: ${BCRYPT_STRENGTH:12}
   jwt:
@@ -45,7 +82,9 @@ app:
   refresh-token:
     store-user-agent: ${REFRESH_STORE_UA:true}
     store-ip: ${REFRESH_STORE_IP:true}
-
+  cache:
+    ttl-seconds:
+      track: ${CACHE_TTL:300}        # TTL cho cache track theo id
 web:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS}
@@ -54,3 +93,35 @@ web:
     exposed-headers: ${CORS_EXPOSED_HEADERS:Authorization}
     allowed-credentials: ${CORS_ALLOW_CREDENTIALS:true}
     max-age: ${CORS_MAX_AGE:3600}
+logging:
+  level:
+    org.springframework.cache: TRACE
+    org.springframework.cache.interceptor: TRACE
+    org.springframework.data.redis: DEBUG
+    io.lettuce.core: DEBUG
+    root: INFO
+    org.springframework.web: INFO
+    com.example.nextune_backend: DEBUG
+  pattern:
+    level: "%5p [traceId:%X{traceId}]"
+
+cloudinary:
+  cloud_name: ${CLOUDINARY_CLOUD_NAME}
+  api_key: ${CLOUDINARY_API_KEY}
+  api_secret: ${CLOUDINARY_API_SECRET}
+
+vnpay:
+  tmn-code: ${VNPAY_TMN_CODE}
+  hash-secret: ${VNPAY_HASH_SECRET}
+  pay-url: ${VNPAY_PAY_URL:https://sandbox.vnpayment.vn/paymentv2/vpcpay.html}
+  return-url: ${VNPAY_RETURN_URL:http://localhost:8080/api/payment/vnpay/return}
+  ipn-url: ${VNPAY_IPN_URL:https://89f638432a21.ngrok-free.app/api/billing/vnpay/ipn}
+  curr-code: ${VNPAY_CURR_CODE:VND}
+  locale: ${VNPAY_LOCALE:vn}
+  expire-minutes: ${VNPAY_EXPIRE_MINUTES:15}
+
+voice:
+  nluUrl: ${NLU_URL:http://localhost:8081/nlu}
+
+recommend:
+  url: ${REC_URL:http://localhost:8000/reco}

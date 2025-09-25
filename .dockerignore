@@ -1,0 +1,11 @@
+.git
+**/.idea
+**/.vscode
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/target
+**/.mvn
+**/.env
+**/*.iml
+.github

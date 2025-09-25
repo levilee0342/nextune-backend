@@ -42,8 +42,13 @@ public class TrackArtistController {
         return ResponseEntity.ok(trackArtistService.getArtistsByTrack(trackId));
     }
 
-    @GetMapping("/artist/{artistId}")
-    public ResponseEntity<List<TrackArtistResponse>> getTracksByArtist(@PathVariable String artistId) {
-        return ResponseEntity.ok(trackArtistService.getTracksByArtist(artistId));
-    }
+//    @GetMapping("/artist/{artistId}")
+//    public ResponseEntity<List<TrackArtistResponse>> getTracksByArtist(@PathVariable String artistId) {
+//        return ResponseEntity.ok(trackArtistService.getTracksByArtist(artistId));
+//    }
+@GetMapping("/artist/{artistId}")
+public ResponseEntity<List<TrackResponse>> getTracksByArtist(@PathVariable String artistId) {
+    return ResponseEntity.ok(trackArtistService.getTracksByArtist(artistId));
+}
+
 }

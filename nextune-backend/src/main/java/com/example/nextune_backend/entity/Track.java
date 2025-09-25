@@ -1,5 +1,8 @@
 package com.example.nextune_backend.entity;
 
+import com.example.nextune_backend.entity.enums.EntityType;
+import com.example.nextune_backend.entity.enums.Status;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -26,7 +29,7 @@ public class Track {
     Integer duration;
 
     @Column(name = "play_count")
-    Long playCount;
+    Long playCount = 0L;
 
     String lyric;
 
@@ -39,15 +42,24 @@ public class Track {
     Boolean explicit;
 
     @Column(name = "entity_type")
-    String entityType;
+    @Enumerated(EnumType.STRING)
+    EntityType entityType;
 
     @ManyToOne
     @JoinColumn(name = "album_id")
+    @Nullable
     Album album;
 
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     Status status = Status.PUBLISHED;
 
+    Boolean isPlaying = false;
 
+    @Column(name = "track_order")
+    Integer trackOrder;
+
+    String color;
+
+    String description;
 }
 

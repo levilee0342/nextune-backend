@@ -1,5 +1,8 @@
 package com.example.nextune_backend.entity;
 
+import com.example.nextune_backend.entity.enums.AuthProvider;
+import com.example.nextune_backend.entity.enums.Gender;
+import com.example.nextune_backend.entity.enums.Status;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -26,7 +29,7 @@ public class User {
     String password;
     String avatar;
 
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     Gender gender;
 
     @Column(name = "date_of_birth")
@@ -38,8 +41,8 @@ public class User {
     @Column(name = "is_premium")
     Boolean isPremium;
 
-    @Enumerated
-    private Status status = Status.ACTIVE;
+    @Enumerated(EnumType.STRING)
+    Status status = Status.ACTIVE;
 
     @ManyToOne
     @JoinColumn(name = "role_id")
@@ -51,4 +54,10 @@ public class User {
     @Column(name = "violate_count")
     Integer violateCount;
 
+    @Column(name = "google_sub", unique = true)
+    String googleSub;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "provider", nullable = false)
+    AuthProvider provider = AuthProvider.LOCAL;
 }

@@ -11,6 +11,58 @@ services:
       - nextune-network
     restart: unless-stopped
 
+  rec-service:
+    image: leetuan0342/nextune-recommendation:1
+    container_name: nextune-rec
+    env_file:
+      - ./music-recommendation/.env
+    ports:
+      - "${REC_PORT:-8000}:8000"
+    networks:
+      - nextune-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  
+  assistant-service:
+    image: leetuan0342/nextune-assistant:1
+    container_name: nextune-assistant
+    env_file:
+      - ./nextune-assistant/.env
+    ports:
+      - "${ASSISTANT_PORT:-8081}:8081"
+    networks:
+      - nextune-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/docs"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: ["redis-server", "--requirepass", "mypassword", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"   # có thể bỏ dòng này nếu không cần truy cập từ bên ngoài EC2
+    volumes:
+      - redis-data:/data
+    networks:
+      - nextune-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "mypassword", "PING"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  redis-data:
+  
 networks:
   nextune-network:
     external: true

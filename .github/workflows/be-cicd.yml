@@ -1,29 +1,34 @@
-name: CI/CD pipeline for Backend Server
+name: CI/CD pipeline for Backend + Recommender
 
 on:
   push:
     branches: [dev]
 
 env:
-  DOCKER_IMAGE: leetuan0342/my-nextune-server
+  # Image names
+  DOCKER_IMAGE_JAVA: leetuan0342/my-nextune-server
+  DOCKER_IMAGE_PY: leetuan0342/nextune-recommendation
+  DOCKER_IMAGE_ASSISTANT: leetuan0342/nextune-assistant
+  # Tag cố định (đơn giản); có thể chuyển sang tag theo SHA
   DOCKER_TAG: 1
-
 
 jobs:
   build:
-    name: Build Backend Server
+    name: Build & Push Images
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ---------- JAVA ----------
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
 
+      # Dùng Buildx cho cả 2 image
       - name: Set up Docker BuildX
         uses: docker/setup-buildx-action@v3
 
@@ -33,12 +38,41 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and Push Docker Image
+      # Build & push JAVA
+      - name: Build Java image
         run: |
-          docker build --no-cache -t $DOCKER_IMAGE:$DOCKER_TAG .
-          docker push $DOCKER_IMAGE:$DOCKER_TAG
+          docker build \
+            -t $DOCKER_IMAGE_JAVA:$DOCKER_TAG \
+            -f nextune-backend/Dockerfile \
+            nextune-backend
 
-      - name: Copy necessary files to server
+      - name: Push Java image
+        run: docker push $DOCKER_IMAGE_JAVA:$DOCKER_TAG
+
+      # ---------- PYTHON RECOMMENDATION----------
+      - name: Build Python image
+        run: |
+          docker build \
+            -t $DOCKER_IMAGE_PY:$DOCKER_TAG \
+            -f music-recommendation/Dockerfile \
+            .
+      - name: Push Python image
+        run: docker push $DOCKER_IMAGE_PY:$DOCKER_TAG
+
+      # ---------- ASSISTANT ----------
+      - name: Build Assistant image
+        run: |
+          docker build \
+            -t $DOCKER_IMAGE_ASSISTANT:$DOCKER_TAG \
+            -f nextune-assistant/Dockerfile \
+            ./nextune-assistant
+
+      - name: Push Assistant image
+        run: docker push $DOCKER_IMAGE_ASSISTANT:$DOCKER_TAG
+      
+
+      # Copy compose.yml lên server
+      - name: Copy compose.yml to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -48,13 +82,13 @@ jobs:
           target: "~/nextune-server"
 
   deploy:
-    name: Deploy Backend Server
+    name: Deploy both services on EC2
     runs-on: ubuntu-latest
-    needs: [ "build" ]
+    needs: ["build"]
 
     steps:
-      - name: Write Compose .env on server
-        uses: appleboy/ssh-action@master
+      - name: Write Backend .env on server
+        uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
@@ -62,40 +96,42 @@ jobs:
           script: |
             set -euo pipefail
             mkdir -p ~/nextune-server/nextune-backend
-            # ví dụ trong deploy job (Write Compose .env on server)
-            cat > ~/nextune-server/nextune-backend/.env <<EOF
+            cat > ~/nextune-server/nextune-backend/.env <<'EOF'
             # ===== Server =====
             SERVER_PORT=${{ secrets.SERVER_PORT || '8080' }}
             CONTEXT_PATH=${{ secrets.CONTEXT_PATH || '/api' }}
             APP_NAME=${{ secrets.APP_NAME || 'nextune-backend' }}
-            
-            # ===== Database =====
+
+            # ===== Database (bắt buộc set, KHÔNG để rỗng) =====
             SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}
             SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}
             SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}
-            
+
             # ===== JPA =====
             HIBERNATE_DDL=${{ secrets.HIBERNATE_DDL || 'none' }}
             SHOW_SQL=${{ secrets.SHOW_SQL || 'true' }}
             HIBERNATE_DIALECT=${{ secrets.HIBERNATE_DIALECT || 'org.hibernate.dialect.MySQL8Dialect' }}
-            
+
             # ===== Mail =====
-            MAIL_HOST=${{ secrets.MAIL_HOST || '' }}
+            MAIL_HOST=${{ secrets.MAIL_HOST || 'smtp.gmail.com' }}
             MAIL_PORT=${{ secrets.MAIL_PORT || '587' }}
             MAIL_USERNAME=${{ secrets.MAIL_USERNAME || '' }}
-            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD || '' }}
-            
+            MAIL_PASSWORD='${{ secrets.MAIL_PASSWORD || '' }}'
+
             # ===== Security & JWT =====
             BCRYPT_STRENGTH=${{ secrets.BCRYPT_STRENGTH || '12' }}
-            JWT_SECRET=${{ secrets.JWT_SECRET || '' }}
+            JWT_SECRET='${{ secrets.JWT_SECRET || '' }}'
             JWT_HEADER=${{ secrets.JWT_HEADER || 'Authorization' }}
             JWT_PREFIX=${{ secrets.JWT_PREFIX || 'Bearer' }}
             JWT_ACCESS_EXP_MIN=${{ secrets.JWT_ACCESS_EXP_MIN || '15' }}
-            JWT_REFRESH_EXP_DAYS=${{ secrets.JWT_REFRESH_EXP_DAYS || '14' }}
+            JWT_REFRESH_EXP_DAYS=${{ secrets.JWT_REFRESH_EXP_DAYS || '30' }}
+            JWT_SESSION_EXP_DAYS=${{ secrets.JWT_SESSION_EXP_DAYS || '30' }}
             JWT_CLOCK_SKEW=${{ secrets.JWT_CLOCK_SKEW || '60' }}
             JWT_ROTATE_REFRESH=${{ secrets.JWT_ROTATE_REFRESH || 'true' }}
             JWT_REUSE_DETECTION=${{ secrets.JWT_REUSE_DETECTION || 'true' }}
-            
+            REFRESH_STORE_UA=${{ secrets.REFRESH_STORE_UA || 'true' }}
+            REFRESH_STORE_IP=${{ secrets.REFRESH_STORE_IP || 'true' }}
+
             # ===== CORS =====
             CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS || '' }}
             CORS_ALLOWED_METHODS=${{ secrets.CORS_ALLOWED_METHODS || 'GET,POST,PUT,DELETE,OPTIONS' }}
@@ -103,79 +139,159 @@ jobs:
             CORS_EXPOSED_HEADERS=${{ secrets.CORS_EXPOSED_HEADERS || 'Authorization' }}
             CORS_ALLOW_CREDENTIALS=${{ secrets.CORS_ALLOW_CREDENTIALS || 'true' }}
             CORS_MAX_AGE=${{ secrets.CORS_MAX_AGE || '3600' }}
+
+            # ===== Redis =====
+            REDIS_HOST=${{ secrets.REDIS_HOST || 'redis' }}
+            REDIS_PORT=${{ secrets.REDIS_PORT || '6379' }}
+            REDIS_PASSWORD='${{ secrets.REDIS_PASSWORD || 'mypassword' }}'
+            REDIS_POOL_MAX_ACTIVE=${{ secrets.REDIS_POOL_MAX_ACTIVE || '16' }}
+            REDIS_POOL_MAX_IDLE=${{ secrets.REDIS_POOL_MAX_IDLE || '8' }}
+            REDIS_POOL_MIN_IDLE=${{ secrets.REDIS_POOL_MIN_IDLE || '1' }}
+
+            # ===== Cache TTL =====
+            CACHE_TTL_TRACK=${{ secrets.CACHE_TTL_TRACK || '3600' }}
+            CACHE_TTL_TRACKS_ALL=${{ secrets.CACHE_TTL_TRACKS_ALL || '600' }}
+            CACHE_TTL_TRACKS_BY_ALBUM=${{ secrets.CACHE_TTL_TRACKS_BY_ALBUM || '600' }}
+
+            # ===== Cloudinary =====
+            CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME || '' }}
+            CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY || '' }}
+            CLOUDINARY_API_SECRET='${{ secrets.CLOUDINARY_API_SECRET || '' }}'
+
+            # ===== Google OAuth2 Client =====
+            SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID || '' }}
+            SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET='${{ secrets.GOOGLE_CLIENT_SECRET || '' }}'
+            SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_SCOPE=${{ secrets.GOOGLE_SCOPE || 'openid,email,profile' }}
+            SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI || 'http://localhost:8080/api/auth/login/google/callback' }}
+            SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_NAME=${{ secrets.GOOGLE_CLIENT_NAME || 'Google' }}
+            SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GOOGLE_AUTHORIZATION_URI=${{ secrets.GOOGLE_AUTH_URI || 'https://accounts.google.com/o/oauth2/v2/auth' }}
+            SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GOOGLE_TOKEN_URI=${{ secrets.GOOGLE_TOKEN_URI || 'https://oauth2.googleapis.com/token' }}
+            SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GOOGLE_JWK_SET_URI=${{ secrets.GOOGLE_JWK_URI || 'https://www.googleapis.com/oauth2/v3/certs' }}
+            
+            #==== VNPay ====
+            VNPAY_TMN_CODE=${{ secrets.VNPAY_TMN_CODE || '' }}
+            VNPAY_HASH_SECRET=${{ secrets.VNPAY_HASH_SECRET || '' }}
+            VNPAY_RETURN_URL=${{ secrets.VNPAY_RETURN_URL || '' }}
+            VNPAY_IPN_URL=${{ secrets.VNPAY_IPN_URL || '' }}
+
+            # ===== NLU ===== 
+            NLU_URL=${{ secrets.NLU_URL || 'http://localhost:8081/nlu' }}
+
+            # ===== Recommendation Service =====
+            REC_URL=${{ secrets.REC_URL || 'http://localhost:8000' }}
+            
             EOF
-   
             chmod 600 ~/nextune-server/nextune-backend/.env
-      - name: Deploy Backend Server
-        uses: appleboy/ssh-action@master
+
+      # Ghi .env cho Python recommender
+      - name: Write Recommender .env on server
+        uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             set -euo pipefail
-            
-            # 1) Chọn lệnh compose phù hợp
+            mkdir -p ~/nextune-server/music-recommendation
+            cat > ~/nextune-server/music-recommendation/.env <<'EOF'
+            # ===== Recommender DB (đưa vào GitHub Secrets, KHÔNG commit) =====
+            DB_HOST=${{ secrets.REC_DB_HOST }}
+            DB_PORT=${{ secrets.REC_DB_PORT }}
+            DB_USER=${{ secrets.REC_DB_USER }}
+            DB_PASSWORD='${{ secrets.REC_DB_PASSWORD }}'
+            DB_NAME=${{ secrets.REC_DB_NAME }}
+            # Port public cho service
+            REC_PORT=${{ secrets.REC_PORT }}
+            EOF
+            chmod 600 ~/nextune-server/music-recommendation/.env
+      
+      # Ghi .env cho Assistant
+      - name: Write Assistant .env on server
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            mkdir -p ~/nextune-server/nextune-assistant
+            cat > ~/nextune-server/nextune-assistant/.env <<'EOF'
+            GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+            ASSISTANT_PORT=${{ secrets.ASSISTANT_PORT || '8081' }}
+            EOF
+            chmod 600 ~/nextune-server/nextune-assistant/.env
+      
+
+      - name: Deploy all services
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 45m 
+          timeout: 2m           
+          script_stop: true 
+          script: |
+            set -euo pipefail
+
+            # Chọn compose
             if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
               COMPOSE="docker compose"
             elif command -v docker-compose >/dev/null 2>&1; then
               COMPOSE="docker-compose"
             else
-              echo "ERROR: Neither 'docker compose' (v2) nor 'docker-compose' (v1) is available."
+              echo "ERROR: compose not found"
               exit 1
             fi
-            
-            # 2) Nếu user không có quyền docker, fallback sang sudo
+
             DOCKER="docker"
             if ! $DOCKER ps >/dev/null 2>&1; then
               if command -v sudo >/dev/null 2>&1; then
                 DOCKER="sudo docker"
                 COMPOSE="sudo ${COMPOSE}"
               else
-                echo "ERROR: Current user cannot access docker and sudo is not available."
+                echo "ERROR: no docker access"
                 exit 1
               fi
             fi
-            
-            echo "Docker version:"
-            $DOCKER version
-            echo "Compose version:"
-            $COMPOSE version
-            
-            # 3) Đảm bảo thư mục và file compose tồn tại
+
+            echo "Docker version:"; $DOCKER version
+            echo "Compose version:"; $COMPOSE version
+
             mkdir -p ~/nextune-server
             cd ~/nextune-server
-            test -f compose.yml || { echo "ERROR: compose.yml not found in $(pwd)"; ls -la; exit 1; }
-            
-            # 4) Login Docker Hub trên SERVER
-            echo "Logging in to Docker Hub on server..."
-            $DOCKER logout || true
+            test -f compose.yml || { echo "compose.yml missing"; exit 1; }
+
+            # Login Docker Hub trên server
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | $DOCKER login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-            
-            # 5) Network external (nếu chưa có thì tạo)
+
+            # Network
             $DOCKER network inspect nextune-network >/dev/null 2>&1 || $DOCKER network create nextune-network
-            
-            # 6) Pull image mới, recreate server
-            echo "Pulling images..."
-            $COMPOSE -f compose.yml pull --quiet nextune-server
-            
-            echo "Recreating server..."
+
+            # Pull tất cả images có trong compose
+            $COMPOSE -f compose.yml pull --quiet
+
+            # Recreate
             $COMPOSE -f compose.yml down --remove-orphans
             $COMPOSE -f compose.yml up -d
-            
+
             echo "Containers:"
             $DOCKER ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
-            
-            echo "=== Last 100 log lines of nextune-server ==="
-            $COMPOSE -f compose.yml logs --no-color --tail=100 nextune-server || true
-            
-            # 7) Kiểm tra container có chạy không; nếu không, in logs và faill
-            sleep 3
-            if ! $DOCKER ps --filter "name=nextune-server" --filter "status=running" --format '{{.Names}}' | grep -q '^nextune-server$'; then
-              echo "Container not running. Recent logs:"
-              $COMPOSE -f compose.yml logs --no-color --tail=200 nextune-server || true
-              exit 1
-            fi
-   
-            
-            echo "Deployment completed successfully."
+
+            echo "=== Logs nextune-server (tail 80) ==="
+            $COMPOSE -f compose.yml logs --no-color --tail=80 nextune-server || true
+
+            echo "=== Logs nextune-rec (tail 80) ==="
+            $COMPOSE -f compose.yml logs --no-color --tail=80 rec-service || true
+
+            # Kiểm tra cả 2 container đang chạy
+            sleep 5
+            for name in nextune-server nextune-rec; do
+              if ! $DOCKER ps --filter "name=$name" --filter "status=running" --format '{{.Names}}' | grep -q "^$name$"; then
+                echo "Container $name not running. Recent logs:"
+                $COMPOSE -f compose.yml logs --no-color --tail=200 $name || true
+                exit 1
+              fi
+            done
+
+            echo "Deployment OK."

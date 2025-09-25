@@ -12,4 +12,6 @@ public interface ProfileService {
 
     ProfileResponse updateProfileById(String id, ProfileRequest request);
 
+    String getEmailByUserId(String userId);
+    void revokeScheduledPremium();
 }

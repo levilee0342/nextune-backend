@@ -1,9 +1,11 @@
 package com.example.nextune_backend.entity;
 
+import com.example.nextune_backend.entity.enums.NotificationType;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Entity
@@ -16,20 +18,26 @@ import java.util.Date;
 public class Notification {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    String id;
+    private String id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    User user;
+    @Column(nullable = false)
+    private String senderId;
 
-    String message;
-    @Column(name="created_date")
-    Date createdDate;
+    @Column(nullable = false)
+    private String receiverId;
 
     @Enumerated(EnumType.STRING)
-    NotificationType type;
+    @Column(nullable = false)
+    private NotificationType type; // e.g. MESSAGE, FRIEND_REQUEST, SYSTEM
 
-    @Column(name="entity_id")
-    String entityId;
+    private String title;
+    private String content;
+    private String entityId; // liên kết tới entity khác (albumId, trackId, reportId...)
+
+    @Column(nullable = false)
+    private Boolean isRead = false;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
 
 }

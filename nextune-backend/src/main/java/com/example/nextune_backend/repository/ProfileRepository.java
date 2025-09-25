@@ -1,5 +1,7 @@
 package com.example.nextune_backend.repository;
 
+import com.example.nextune_backend.entity.Track;
+import com.example.nextune_backend.entity.enums.Status;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.example.nextune_backend.entity.User;
@@ -12,4 +14,5 @@ public interface ProfileRepository extends JpaRepository<User, String> {
 
     List<User> findAll();
 
+    List<User> findByIsPremium(Boolean isPremium);
 }

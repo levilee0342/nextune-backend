@@ -30,7 +30,7 @@ public class RefreshToken {
     private String userAgent;
     private String ip;
 
-    @Column(nullable = false, unique = true, length = 200)
+    @Column(unique = true, length = 200)
     private String sessionHash;
 }
 

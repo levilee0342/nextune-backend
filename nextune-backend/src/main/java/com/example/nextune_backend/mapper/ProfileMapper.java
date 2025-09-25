@@ -11,10 +11,13 @@ import com.example.nextune_backend.entity.User;
 
 @Mapper(componentModel = "spring")
 public interface ProfileMapper {
+
     ProfileResponse map(User user);
 
     List<ProfileResponse> map(List<User> users);
 
     User map(ProfileRequest request);
+
+    
 
 }

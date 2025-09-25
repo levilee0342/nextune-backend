@@ -27,9 +27,19 @@ public class PlaylistController {
         return ResponseEntity.ok(playlistService.getPlaylistById(id));
     }
 
-    @GetMapping
+    @GetMapping("/for-admin/{id}")
+    public ResponseEntity<PlaylistResponse> getPlaylistByIdForAdmin(@PathVariable String id) {
+        return ResponseEntity.ok(playlistService.getPlaylistByIdForAdmin(id));
+    }
+
+    @GetMapping("/all")
     public ResponseEntity<List<PlaylistResponse>> getAllPlaylists() {
         return ResponseEntity.ok(playlistService.getAllPlaylists());
+    }
+
+    @GetMapping("/for-admin/all")
+    public ResponseEntity<List<PlaylistResponse>> getAllPlaylistsForAdmin() {
+        return ResponseEntity.ok(playlistService.getAllPlaylistsForAdmin());
     }
 
     @PutMapping("/{id}")
@@ -44,4 +54,24 @@ public class PlaylistController {
         playlistService.deletePlaylist(id);
         return ResponseEntity.ok("Deleted playlist with id: " + id);
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<List<PlaylistResponse>> getMyPlaylists() {
+        return ResponseEntity.ok(playlistService.getMyPlaylists());
+    }
+
+    @GetMapping(params = {"sortBy"})
+    public ResponseEntity<List<PlaylistResponse>> searchPlaylists(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String genre,
+            @RequestParam String sortBy,                        // listenCount | createdAt
+            @RequestParam(defaultValue = "desc") String order,  // asc | desc
+            @RequestParam(defaultValue = "20") int limit
+    ) {
+        List<PlaylistResponse> data =
+                playlistService.searchPlaylists(name, genre, sortBy, order, limit);
+        return ResponseEntity.ok(data);
+    }
+
+
 }

@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/track-collections")
@@ -17,15 +18,23 @@ public class TrackCollectionController {
     private final TrackCollectionService trackCollectionService;
 
     @PostMapping
-    public ResponseEntity<TrackCollectionResponse> createTrackCollection(@RequestBody TrackCollectionRequest request) {
-        return ResponseEntity.ok(trackCollectionService.addTrackToPlaylist(request));
+    public ResponseEntity<Map<String, String>> addTrackToPlaylists(@RequestBody TrackCollectionRequest request) {
+        try {
+            String result = trackCollectionService.addTrackToPlaylists(request);
+            return ResponseEntity.ok(Map.of("Messages", result));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("Messages", "Error: " + e.getMessage()));
+        }
     }
 
-    @DeleteMapping("/{playlistId}/{trackId}")
-    public ResponseEntity<String> removeTrackFromPlaylist(@PathVariable String playlistId,
-                                                          @PathVariable String trackId) {
-        trackCollectionService.removeTrackFromPlaylist(playlistId, trackId);
-        return ResponseEntity.ok("Removed track " + trackId + " from playlist " + playlistId);
+    @DeleteMapping("/remove")
+    public ResponseEntity<Map<String, String>> removeTrackFromPlaylists(@RequestBody TrackCollectionRequest request) {
+        try {
+            String result = trackCollectionService.removeTrackFromPlaylists(request);
+            return ResponseEntity.ok(Map.of("Messages", result));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("Messages", "Error: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/{playlistId}")

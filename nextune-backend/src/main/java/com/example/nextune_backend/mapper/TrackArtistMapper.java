@@ -21,8 +21,14 @@ public interface TrackArtistMapper {
     @Mapping(target = "artist", source = "artist")
     TrackArtist toEntity(TrackArtistRequest request, Track track, User artist);
 
+
     @Mapping(target = "trackId", source = "track.id")
     @Mapping(target = "artistId", source = "artist.id")
+    @Mapping(target = "roleInTrack", source = "roleInTrack")
+    @Mapping(target = "trackName", source = "track.name")
+    @Mapping(target = "imgUrl", source = "track.imgUrl")
+    @Mapping(target = "playCount", source = "track.playCount")
+    @Mapping(target = "duration", source = "track.duration")
     TrackArtistResponse toResponse(TrackArtist entity);
 
     List<TrackArtistResponse> toResponseList(List<TrackArtist> entities);

@@ -2,9 +2,9 @@ package com.example.nextune_backend.dto.response;
 
 import java.time.LocalDateTime;
 
-import com.example.nextune_backend.entity.Gender;
+import com.example.nextune_backend.entity.enums.Gender;
 import com.example.nextune_backend.entity.Role;
-import com.example.nextune_backend.entity.Status;
+import com.example.nextune_backend.entity.enums.Status;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

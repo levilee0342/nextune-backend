@@ -15,8 +15,6 @@ import java.time.LocalDateTime;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CommentId implements Serializable {
-    String episodeId;
+    String trackId;
     String userId;
-
-
 }

@@ -1,9 +1,9 @@
 package com.example.nextune_backend.entity;
 
+import com.example.nextune_backend.entity.enums.RoleName;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.springframework.security.core.GrantedAuthority;
 
 @Entity
 @Table(name = "roles")

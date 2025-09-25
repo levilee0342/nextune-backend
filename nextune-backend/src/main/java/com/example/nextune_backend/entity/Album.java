@@ -1,8 +1,11 @@
 package com.example.nextune_backend.entity;
 
+import com.example.nextune_backend.entity.enums.EntityType;
+import com.example.nextune_backend.entity.enums.Status;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.Formula;
 
 import java.time.LocalDate;
 
@@ -39,9 +42,16 @@ public class Album {
     @Column(name = "total_saves")
     Integer totalSaves;
 
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     EntityType entityType;
 
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     Status status = Status.PUBLISHED;
+
+    @Formula("(SELECT COALESCE(SUM(t.play_count),0) " +
+            " FROM track t " +
+            " WHERE t.album_id = id AND t.status = 'PUBLISHED')")
+    Long totalListenCount;
+
+    String color;
 }

@@ -1,7 +1,7 @@
 package com.example.nextune_backend.repository;
 
 import com.example.nextune_backend.entity.Role;
-import com.example.nextune_backend.entity.RoleName;
+import com.example.nextune_backend.entity.enums.RoleName;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

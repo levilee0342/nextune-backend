@@ -12,6 +12,8 @@ public interface RefreshTokenService {
     Optional<RefreshToken> findActiveByRawToken(String raw);
     Optional<RefreshToken> findActiveByRawSessionToken(String raw);
     void revoke(RefreshToken rt);
+    void revokeSession(String rt);
     void revokeAllByUserId(Long userId);
     String hash(String raw);
+    void revokeBySessionToken(String rawSessionToken);
 }

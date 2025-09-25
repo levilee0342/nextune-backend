@@ -9,6 +9,7 @@ import com.example.nextune_backend.entity.TrackArtist;
 import com.example.nextune_backend.entity.TrackArtistId;
 import com.example.nextune_backend.entity.User;
 import com.example.nextune_backend.mapper.TrackArtistMapper;
+import com.example.nextune_backend.mapper.TrackMapper;
 import com.example.nextune_backend.repository.TrackArtistRepository;
 import com.example.nextune_backend.repository.TrackRepository;
 import com.example.nextune_backend.repository.UserRepository;
@@ -27,6 +28,7 @@ public class TrackArtistServiceImpl implements TrackArtistService {
     private final TrackRepository trackRepository;
     private final UserRepository userRepository;
     private final TrackArtistMapper trackArtistMapper;
+    private final TrackMapper trackMapper;
 
     @Override
     public TrackArtistResponse assignArtistToTrack(TrackArtistRequest request) {
@@ -66,9 +68,19 @@ public class TrackArtistServiceImpl implements TrackArtistService {
     public List<TrackArtistResponse> getArtistsByTrack(String trackId) {
         return trackArtistMapper.toResponseList(trackArtistRepository.findByTrack_Id(trackId));
     }
+//
+//    @Override
+//    public List<TrackArtistResponse> getTracksByArtist(String artistId) {
+//        return trackArtistMapper.toResponseList(trackArtistRepository.findByArtist_Id(artistId));
+//    }
 
     @Override
-    public List<TrackArtistResponse> getTracksByArtist(String artistId) {
-        return trackArtistMapper.toResponseList(trackArtistRepository.findByArtist_Id(artistId));
+    public List<TrackResponse> getTracksByArtist(String artistId) {
+        List<TrackArtist> relations = trackArtistRepository.findByArtist_Id(artistId);
+        return relations.stream()
+                .map(TrackArtist::getTrack) // lấy Track từ quan hệ
+                .map(trackMapper::map) // map sang DTO
+                .toList();
     }
+
 }

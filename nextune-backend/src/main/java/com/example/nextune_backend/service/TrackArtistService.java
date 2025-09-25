@@ -19,5 +19,7 @@ public interface TrackArtistService {
 
     List<TrackArtistResponse> getArtistsByTrack(String trackId);
 
-    List<TrackArtistResponse> getTracksByArtist(String artistId);
+    //List<TrackArtistResponse> getTracksByArtist(String artistId);
+
+     List<TrackResponse> getTracksByArtist(String artistId);
 }

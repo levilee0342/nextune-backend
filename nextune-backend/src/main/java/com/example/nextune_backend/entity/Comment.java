@@ -5,7 +5,6 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
-
 @Table(name = "comment")
 @Entity
 @Data
@@ -18,7 +17,7 @@ public class Comment {
     CommentId id;
 
     @ManyToOne
-    @MapsId("episodeId")
+    @MapsId("trackId")
     @JoinColumn(name ="track_id")
     Track track;
 
@@ -31,5 +30,4 @@ public class Comment {
     LocalDateTime commentDate;
 
     String content;
-
 }

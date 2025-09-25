@@ -1,5 +1,6 @@
 package com.example.nextune_backend.entity;
 
+import com.example.nextune_backend.entity.enums.ReportStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -28,7 +29,8 @@ public class Report {
     Date createdDate;
 
     @Enumerated(EnumType.STRING)
-    Status status;
+    @Column(name = "status", length = 32, nullable = false)
+    ReportStatus status;
 
     @Column(name="entity_id")
     String entityId;

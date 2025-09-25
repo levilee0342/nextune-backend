@@ -1,5 +1,6 @@
 package com.example.nextune_backend.entity;
 
+import com.example.nextune_backend.entity.enums.RoleName;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;

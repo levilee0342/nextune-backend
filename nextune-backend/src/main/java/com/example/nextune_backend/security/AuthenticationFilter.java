@@ -55,32 +55,32 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             }
 
 
-if (token == null) {
-    if (request.getCookies() != null) {
-        for (Cookie cookie : request.getCookies()) {
-            if ("ACCESS_TOKEN".equals(cookie.getName())) {
-                token = cookie.getValue();
+        if (token == null) {
+            if (request.getCookies() != null) {
+                for (Cookie cookie : request.getCookies()) {
+                    if ("ACCESS_TOKEN".equals(cookie.getName())) {
+                        token = cookie.getValue();
+                    }
+                }
             }
         }
-    }
-}
 
-// 3. Validate & set SecurityContext
-if (token != null && tokenProvider.validateToken(token)) {
-    String username = tokenProvider.getSubject(token);
-    var userDetails = userPrincipal.loadUserByUsername(username);
+        // 3. Validate & set SecurityContext
+        if (token != null && tokenProvider.validateToken(token)) {
+            String username = tokenProvider.getSubject(token);
+            var userDetails = userPrincipal.loadUserByUsername(username);
 
-    UsernamePasswordAuthenticationToken authentication =
-            new UsernamePasswordAuthenticationToken(
-                    userDetails,
-                    null,
-                    userDetails.getAuthorities()
-            );
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
 
-    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-    SecurityContextHolder.getContext().setAuthentication(authentication);
-}
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
 
         } catch (AuthenticationException ex) { // handle 401
             SecurityContextHolder.clearContext();

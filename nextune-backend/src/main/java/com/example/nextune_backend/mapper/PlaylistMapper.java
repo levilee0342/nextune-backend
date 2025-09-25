@@ -26,7 +26,10 @@ public interface PlaylistMapper {
 
     // entity -> response
     @Mapping(target = "userId", source = "user.id")
+    @Mapping(target = "ownerName", source = "user.name")
     PlaylistResponse toResponse(Playlist playlist);
 
     List<PlaylistResponse> toResponseList(List<Playlist> playlists);
+
+
 }

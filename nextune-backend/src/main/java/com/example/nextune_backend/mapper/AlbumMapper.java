@@ -6,15 +6,14 @@ import com.example.nextune_backend.dto.response.AlbumResponse;
 import com.example.nextune_backend.dto.response.ProfileResponse;
 import com.example.nextune_backend.entity.Album;
 import com.example.nextune_backend.entity.User;
-import org.mapstruct.BeanMapping;
-import org.mapstruct.Mapper;
-import org.mapstruct.MappingTarget;
-import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.*;
 
 import java.util.List;
 
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface AlbumMapper {
+    @Mapping(target = "artistId",   source = "artist.id")
+    @Mapping(target = "artistName", source = "artist.name")
     AlbumResponse map(Album album);
 
     List<AlbumResponse> map(List<Album> albums);
@@ -22,5 +21,6 @@ public interface AlbumMapper {
     Album map(AlbumRequest request);
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateAlbumFromRequest(AlbumRequest request, @MappingTarget Album album);
+
 
 }

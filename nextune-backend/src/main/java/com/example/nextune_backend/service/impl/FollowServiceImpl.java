@@ -1,6 +1,7 @@
 package com.example.nextune_backend.service.impl;
 
 import com.example.nextune_backend.entity.*;
+import com.example.nextune_backend.entity.enums.Status;
 import com.example.nextune_backend.repository.FollowRepository;
 import com.example.nextune_backend.repository.UserRepository;
 import com.example.nextune_backend.service.FollowService;

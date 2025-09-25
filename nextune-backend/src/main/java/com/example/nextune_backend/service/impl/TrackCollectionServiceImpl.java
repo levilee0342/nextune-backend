@@ -8,48 +8,99 @@ import com.example.nextune_backend.repository.PlaylistRepository;
 import com.example.nextune_backend.repository.TrackCollectionRepository;
 import com.example.nextune_backend.repository.TrackRepository;
 import com.example.nextune_backend.service.TrackCollectionService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class TrackCollectionServiceImpl implements TrackCollectionService {
 
-    private final TrackCollectionRepository trackCollectionRepository;
-    private final TrackRepository trackRepository;
-    private final PlaylistRepository playlistRepository;
-    private final TrackCollectionMapper trackCollectionMapper;
+        private final TrackCollectionRepository trackCollectionRepository;
+        private final TrackRepository trackRepository;
+        private final PlaylistRepository playlistRepository;
+        private final TrackCollectionMapper trackCollectionMapper;
 
-    @Override
-    public TrackCollectionResponse addTrackToPlaylist(TrackCollectionRequest request) {
-        Track track = trackRepository.findById(request.getTrackId())
-                .orElseThrow(() -> new RuntimeException("Track not found"));
-        Playlist playlist = playlistRepository.findById(request.getPlaylistId())
-                .orElseThrow(() -> new RuntimeException("Playlist not found"));
+        @Override
+        @Transactional
+        public String  addTrackToPlaylists(TrackCollectionRequest request) {
+            String trackId = request.getTrackId();
+            List<String> playlistIds = request.getPlaylistIds();
+            Track track = trackRepository.findById(trackId)
+                    .orElseThrow(() -> new RuntimeException("Track not found"));
 
-        TrackCollectionId id = new TrackCollectionId(request.getPlaylistId(), request.getTrackId());
-        if (trackCollectionRepository.existsById(id)) {
-            throw new RuntimeException("Track already exists in playlist");
+            if (playlistIds == null || playlistIds.isEmpty()) {
+                return "Added Failed";
+            }
+
+            try {
+                for (String playlistId : playlistIds) {
+                    trackCollectionRepository.insertTrackIntoPlaylist(
+                            trackId,
+                            playlistId,
+                            request.getTrackOrder()
+
+                    );
+                    Playlist playlist = playlistRepository.findById(playlistId)
+                            .orElseThrow(() -> new RuntimeException("Playlist not found"));
+
+                    playlist.setTotalTracks(playlist.getTotalTracks() + 1);
+                    playlist.setTotalDuration(playlist.getTotalDuration() + track.getDuration());
+                }
+                return "Added Successfully";
+            } catch (Exception e) {
+                return "Added Failed";
+            }
         }
 
-        TrackCollection entity = trackCollectionMapper.toEntity(request, playlist, track);
-        return trackCollectionMapper.toResponse(trackCollectionRepository.save(entity));
-    }
+        @Override
+        @Transactional
+        public String  removeTrackFromPlaylists(TrackCollectionRequest request) {
+            String trackId = request.getTrackId();
+            List<String> playlistIds = request.getPlaylistIds();
 
-    @Override
-    public void removeTrackFromPlaylist(String playlistId, String trackId) {
-        TrackCollectionId id = new TrackCollectionId(trackId,playlistId);
-        if (!trackCollectionRepository.existsById(id)) {
-            throw new RuntimeException("Track not found in playlist");
+            if (playlistIds == null || playlistIds.isEmpty()) {
+                return "Removed Failed";
+            }
+
+            try {
+                Track track = trackRepository.findById(trackId)
+                        .orElseThrow(() -> new RuntimeException("Track not found"));
+                trackCollectionRepository.deleteTrackFromPlaylists(trackId, playlistIds);
+                for (String playlistId : playlistIds) {
+                    Playlist playlist = playlistRepository.findById(playlistId)
+                            .orElseThrow(() -> new RuntimeException("Playlist not found"));
+
+                    int newTotalTracks = Math.max(0, playlist.getTotalTracks() - 1);
+                    int newTotalDuration = Math.max(0, playlist.getTotalDuration() - track.getDuration());
+
+                    playlist.setTotalTracks(newTotalTracks);
+                    playlist.setTotalDuration(newTotalDuration);
+
+                    playlistRepository.save(playlist);
+                }
+                return "Removed Successfully";
+            } catch (Exception e) {
+                return "Removed Failed";
+            }
         }
-        trackCollectionRepository.deleteById(id);
-    }
 
-    @Override
-    public List<TrackCollectionResponse> getTracksByPlaylist(String playlistId) {
-        List<TrackCollection> collections = trackCollectionRepository.findByPlaylist_Id(playlistId);
-        return trackCollectionMapper.toResponseList(collections);
-    }
+        @Override
+        public List<TrackCollectionResponse> getTracksByPlaylist(String playlistId) {
+            List<TrackCollection> collections = trackCollectionRepository.findPublishedByPlaylistOrdered(playlistId);
+            return trackCollectionMapper.toResponseList(collections);
+        }
+
+        @Override
+        public List<TrackCollectionResponse> getPlaylistsByTrack(String trackId) {
+            return trackCollectionRepository.findByTrackId(trackId).stream()
+                    .map(trackCollectionMapper::toResponse)
+                    .collect(Collectors.toList());
+        }
+
+        
 }

@@ -1,10 +1,9 @@
 package com.example.nextune_backend.entity;
 
+import com.example.nextune_backend.entity.enums.Status;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.io.Serializable;
 
 @Entity
 @Table(name = "follow")
@@ -27,7 +26,7 @@ public class Follow {
     @JoinColumn(name="follower_id")
     User followerUser;
 
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     Status status = Status.FOLLOWED;
 }
 
