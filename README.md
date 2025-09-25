@@ -1,4 +1,5 @@
 # 🎵 Nextune - Music Application
+## [Application Link](https://nextune.ddnsgeek.com/)
 
 A **Spotify-inspired music application** with a scalable backend built on **Java Spring Boot**, powered by a **hybrid recommendation system**. Deployed on **AWS EC2** with **Docker** and automated using **GitHub Actions CI/CD**.
 
@@ -39,6 +40,11 @@ It provides all the essential features of a modern music platform with **persona
   - Track
 - Entity-to-DTO mapping with **MapStruct** for clean API responses.
 
+### 🗣️ AI Voice Assistant
+- **Gemini API integration:** Powering natural language understanding.  
+- **Voice commands:** Play tracks by name, skip, or control playback.  
+- **Seamless interaction:** Hands-free, intuitive control of the application.  
+
 ### 🤖 Recommendation System
 - **Content-based filtering:** Lyrics, genres, and track metadata.
 - **Collaborative filtering:** Based on user listening history.
@@ -69,8 +75,6 @@ Every push to the `dev` branch triggers:
 
 ---
 
-## 📎 Demo
+## 📎 [Demo](https://nextune.ddnsgeek.com/)
 
-<img width="1178" height="232" alt="image" src="https://github.com/user-attachments/assets/04d549b7-3693-4c03-8606-099dffada5d6" />
 
-<img width="1415" height="699" alt="image" src="https://github.com/user-attachments/assets/45c56b4e-7014-4423-bcf9-c4c5d11dee22" />
