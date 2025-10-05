@@ -74,6 +74,6 @@ Every push to the `dev` branch triggers:
 
 ---
 
-## 📎 [Demo](https://nextune.ddnsgeek.com/)
+## 📎 [Demo](https://youtu.be/9So3mvQZVe0)
 
 
